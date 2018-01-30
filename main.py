@@ -5,6 +5,12 @@ import csv
 import sys
 import sqlparse
 import pandas as pd
+# Add vendor directory to module search path
+parent_dir = os.path.abspath(os.path.dirname(__file__))
+vendor_dir = os.path.join(parent_dir, 'vendor')
+
+sys.path.append(vendor_dir)
+import moz_sql_parser
 
 class SQLEngine(object):
     def __init__(self):
@@ -12,9 +18,9 @@ class SQLEngine(object):
         self.metadata = {} 
         self.data = {}
         self.querystring = ""
-        self.selectArgs = []
-        self.fromArgs = []
-        self.whereArgs = ""
+        self.selectArgs = {}
+        self.fromArgs = {}
+        self.whereArgs = {}
         self.joinedColumns = {}
         self.joinedTables = []
         self.error = False
