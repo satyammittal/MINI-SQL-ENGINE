@@ -24,7 +24,7 @@ class SQLEngine(object):
         self.fromArgs = {}
         self.whereArgs = {}
         self.distinct = False
-        self.joinedColumns = {}
+        self.joinedColumns = []
         self.joinedTables = []
         self.int_flag= True
         self.error = False
@@ -90,10 +90,11 @@ class SQLEngine(object):
             col = array[key]
             tab = self.return_column_name(col)
             res = dct_df[tab]
+            if key == "distinct":
+                return key
+            print key+"("+tab+")"
             if "avg" in key:
                 print res.agg('mean')
-            elif key == "distinct":
-                return key
             else:
                 print res.agg(key)
 
@@ -194,6 +195,7 @@ class SQLEngine(object):
                             head_table=df[df[comp1]!=int(comp2)]
                     else:
                         if key=="eq":
+                            self.joinedColumns.append(comp2)
                             head_table=df[df[comp1]==df[comp2]]
                         elif key=="lt":
                             print "asd"
@@ -226,7 +228,7 @@ class SQLEngine(object):
         val = list()
         for x in coln_list:
             col_ret = self.return_column_name(x)
-            if col_ret != 'ERR0R':
+            if col_ret != 'ERR0R' and col_ret not in self.joinedColumns:
                 val.append(col_ret)
         return val
 
@@ -248,6 +250,9 @@ class SQLEngine(object):
             col_list = self.select_columns_for_table(self.selectArgs)
             final_list.extend(col_list)
         else:
+            for coln in self.joinedColumns:
+                if coln in df.columns:
+                    df = df.drop(coln, axis=1) 
             table_data = df
             sel = False
         if sel:
@@ -306,7 +311,6 @@ if __name__ == "__main__":
                         except Exception as e:
                             pass
                     output = output.drop_duplicates()
-                #print output
                 print output.to_csv(sep=',',index=False, line_terminator='\n')[:-1]
             
         else:
