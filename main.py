@@ -60,6 +60,8 @@ class SQLEngine(object):
             file = table+'.csv'
             df = pd.read_csv(file,header = None,names = list(self.metadata[table]))
             self.data[table] = df
+            
+
 
     def check_query(self, query):
         self.querystring = query
@@ -92,7 +94,7 @@ class SQLEngine(object):
             col = array[key]
             tab = self.return_column_name(col)
             #print tab[1],tab[0]
-            res = dct_df[tab[1]][tab[0]]
+            res = dct_df[tab]
             if "avg" in key:
                 print res.agg('mean')
             elif key == "distinct":
@@ -127,11 +129,18 @@ class SQLEngine(object):
             
 
     def apply_from(self):
-        df = pd.DataFrame()
+        result = pd.DataFrame()
         for table in self.fromArgs:
-            df = df.join(self.data[table], how="outer")
+            df = self.data[table].copy()
+            df.columns = [table + '.' + str(col) for col in df.columns]
+            df["join:key"]=1
+            if result.empty:
+                result = df
+            else: 
+                result = pd.merge(result, df)
         #print self.data["table1"].join(self.data["table2"], lsuffix='_caller', rsuffix='_other')
-        self.joinedTables = df
+        result = result.drop(["join:key"], axis=1)
+        self.joinedTables = result
     
     def return_column_name(self, name):
         try:
@@ -140,7 +149,7 @@ class SQLEngine(object):
                 table_data = self.metadata[array[0]]
                 if array[1] in table_data:
                     #ol_name = array[0]+':'+array[1]
-                    return (str(array[1]), str(array[0]))
+                    return str(array[0]) + '.' + str(array[1])
         except Exception as e:
             pass
         for key in self.fromArgs:
@@ -149,7 +158,7 @@ class SQLEngine(object):
             for column in col_list:
                 #print column
                 if column == name:
-                    return (str(name), str(key))
+                    return (str(key) + '.' + str(name))
         return self.get_compare_literal(name)
     
     def get_compare_literal(self, value):
@@ -161,11 +170,9 @@ class SQLEngine(object):
             try:
                 return float(value)
             except Exception as e:
-                return ("ERROR", "ERROR")
+                return 'ERROR'
     def return_copy_dataframe(self, df):
-        result = {}
-        for t in df:
-            result[t]=df[t].copy()
+        result=df.copy()
         return result
 
     def apply_condition(self, dict, head_table):
@@ -181,31 +188,42 @@ class SQLEngine(object):
                 if len(eq) == 2:
                     #print eq[0]
                     result= self.return_column_name(eq[0])
-                    comp1=result[0]
-                    table=result[1]
+                    comp1=result
                     #print head_table
-                    df = head_table[result[1]]
+                    df = head_table
                     #print df
                     #print comp1, table
                     comp2 = self.return_column_name(eq[1])
-                    #print comp2
-                    if not isinstance(comp2, tuple) or comp2[0]=="ERROR":
+                    if not isinstance(comp2, str):
                         #print comp1, comp2
                         #print df
                         #print "assd"
                         #print int(comp2)
                         if key=="eq":
-                            head_table[table]=df[df[comp1]==int(comp2)]
+                            head_table=df[df[comp1]==int(comp2)]
                         elif key=="lt":
-                            head_table[table]=df[df[comp1]<int(comp2)]
+                            head_table=df[df[comp1]<int(comp2)]
                         elif key=="gt":
-                            head_table[table]=df[df[comp1]>int(comp2)]
+                            head_table=df[df[comp1]>int(comp2)]
                         elif key=="lte":
-                            head_table[table]=df[df[comp1]<=int(comp2)]
+                            head_table=df[df[comp1]<=int(comp2)]
                         elif key=="gte":
-                            head_table[table]=df[df[comp1]>=int(comp2)]
+                            head_table=df[df[comp1]>=int(comp2)]
                         else:
-                            head_table[table]=df[df[comp1]!=int(comp2)]
+                            head_table=df[df[comp1]!=int(comp2)]
+                    else:
+                        if key=="eq":
+                            head_table=df[df[comp1]==df[comp2]]
+                        elif key=="lt":
+                            head_table=df[df[comp1]<df[comp2]]
+                        elif key=="gt":
+                            head_table=df[df[comp1]>df[comp2]]
+                        elif key=="lte":
+                            head_table=df[df[comp1]<=df[comp2]]
+                        elif key=="gte":
+                            head_table=df[df[comp1]>=df[comp2]]
+                        else:
+                            head_table=df[df[comp1]!=df[comp2]]
                 del df
                 return head_table
             elif key=="and" or key=="or":
@@ -216,15 +234,9 @@ class SQLEngine(object):
                 df2 = self.apply_condition(eq[1], table2)
                 result = {}
                 if key=="and":
-                    for a, b in zip(df1, df2):
-                        y1 = df1[a]
-                        y2 = df2[b]
-                        result[a]=pd.merge(y1, y2, how='inner')
+                    result=pd.merge(df1, df2, how='inner')
                 else:
-                    for a, b in zip(df1, df2):
-                        y1 = df1[a]
-                        y2 = df2[b]
-                        result[a]=pd.merge(y1, y2, how='outer')
+                    result=pd.merge(df1, df2, how='outer')
                 return result
 
     def select_columns_for_table(self, table, coln_list):
@@ -232,12 +244,13 @@ class SQLEngine(object):
         for x in coln_list:
             #print type(x)
             col_ret = self.return_column_name(x)
-            if col_ret[1] == table:
-                val.append(col_ret[0])
+            if col_ret != 'ERR0R':
+                val.append(col_ret)
         return val
 
     def select(self, df):
         result = pd.DataFrame()
+        #print df
         #print self.selectArgs
         for table in self.fromArgs:
             #print df[table]
@@ -258,13 +271,18 @@ class SQLEngine(object):
                     self.selecttoArr()
                 #print self.selectArgs
                 col_list = self.select_columns_for_table(table, self.selectArgs)
-                table_data = df[table][col_list]
-                table_data.columns = [table + '.' + str(col) for col in table_data.columns]
-                result = result.join(table_data, how="outer")
+                #print col_list
+                table_data = df[col_list]
+                #table_data.columns = [table + '.' + str(col) for col in table_data.columns]
             else:
-                table_data = df[table]
-                table_data.columns = [table + '.' + str(col) for col in table_data.columns]
-                result = result.join(table_data, how="outer")
+                table_data = df
+                #table_data.columns = [table + '.' + str(col) for col in table_data.columns]
+            table_data["join:key"]=1
+            if result.empty:
+                result = table_data
+            else:
+                result = pd.merge(result, table_data)
+        result = result.drop("join:key", axis=1)
         result = result.dropna(axis=0, how='all')
         result = result.dropna(axis=1, how='all')
         return result
@@ -297,8 +315,8 @@ if __name__ == "__main__":
         database.initialize_metadata("metadata.txt")
         database.initialize_data()
         database.error = False
-        #queryString = raw_input("SQL> ")
-        queryString = "select DISTINCT table1.B, table2.B from table1, table2 where A>'-1000' or C>5500;"
+        queryString = raw_input("SQL> ")
+        #queryString = "select DISTINCT table1.B, table2.B from table1, table2 where A>'-1000' or C>5500;"
         if queryString == "exit" :
             print "Bye"
             break
@@ -308,9 +326,10 @@ if __name__ == "__main__":
             #print database.selectArgs
             #print database.fromArgs
             #print database.whereArgs
-            #database.apply_from()
+            database.apply_from()
             #print database.joinedTables
-            df = database.data.copy()
+            df = database.joinedTables.copy()
+            #print database.joinedTables
             #print database.selectArgs
             result= database.apply_condition(database.whereArgs,df)
             output= database.select(result)
