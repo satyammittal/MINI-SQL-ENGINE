@@ -252,7 +252,7 @@ case = (
 
 selectStmt = Forward()
 compound = (
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    #(Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
