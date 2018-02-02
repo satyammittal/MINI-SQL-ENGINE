@@ -95,13 +95,17 @@ class SQLEngine(object):
     def check_aggregate(self,array,dct_df):
         for key in array.keys():
             col = array[key]
+            rounded = 6
+            if isinstance(col, list):
+                rounded = int(col[1])
+                col= col[0]
             tab = self.return_column_name(col)
             res = dct_df[tab]
             if key == "distinct":
                 return key
             print key+"("+tab+")"
             if "avg" in key:
-                print res.agg('mean')
+                print round(res.agg('mean'), rounded)
             else:
                 print res.agg(key)
 
