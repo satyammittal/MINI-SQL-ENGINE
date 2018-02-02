@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+"""main.py: Run mini-sql engine, takes argument command supported by mysql"""
+
+__author__      = "Satyam Mittal"
+__copyright__   = "Copyright 2018"
+
 from collections import defaultdict
 import os
 import re
@@ -67,7 +74,7 @@ class SQLEngine(object):
         try:
             parsed_query = moz.parse(self.querystring)
         except Exception as e:
-            self.showError()
+            #self.showError()
             return
         query = parsed_query
         self.selectArgs = query.get('select', {})
@@ -180,6 +187,7 @@ class SQLEngine(object):
                     comp1=result
                     df = head_table
                     comp2 = self.return_column_name(eq[1])
+                    #print comp2, comp1
                     if not isinstance(comp2, str):
                         if key=="eq":
                             head_table=df[df[comp1]==int(comp2)]
@@ -198,9 +206,7 @@ class SQLEngine(object):
                             self.joinedColumns.append(comp2)
                             head_table=df[df[comp1]==df[comp2]]
                         elif key=="lt":
-                            print "asd"
                             head_table=df[df[comp1]<df[comp2]]
-                            print df[df[comp1]<df[comp2]]
                         elif key=="gt":
                             head_table=df[df[comp1]>df[comp2]]
                         elif key=="lte":
@@ -274,7 +280,7 @@ class SQLEngine(object):
 
     def showError(self) :
     	self.error = True
-    	print "Error in query syntax - Not an SQL query"
+    	print "Error in query syntax"
     
     def clear(self):
         del self.data
@@ -284,17 +290,16 @@ class SQLEngine(object):
 
         
 if __name__ == "__main__":
-    print "WELCOME TO MINI-SQL ENGINE"
-    while True :
-        database = SQLEngine()
-        database.initialize_metadata("metadata.txt")
-        database.initialize_data()
-        database.error = False
-        queryString = raw_input("SQL> ")
-        if queryString == "exit" :
-            print "Bye"
-            break
-        elif queryString[-1]==';':
+    #print "WELCOME TO MINI-SQL ENGINE"
+    database = SQLEngine()
+    database.initialize_metadata("metadata.txt")
+    database.initialize_data()
+    database.error = False
+    #queryString = raw_input("SQL> ")
+    queryString = sys.argv[1]
+    #print queryString
+    if queryString[-1]==';':
+        try:
             queryString = queryString[:-1]
             database.check_query(queryString)
             database.apply_from()
@@ -312,10 +317,11 @@ if __name__ == "__main__":
                             pass
                     output = output.drop_duplicates()
                 print output.to_csv(sep=',',index=False, line_terminator='\n')[:-1]
-            
-        else:
+        except Exception as e:
             database.showError()
-        break
-            
+        
+    else:
+        database.showError()
+        
     database.clear()
     
