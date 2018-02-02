@@ -5,12 +5,9 @@
 __author__      = "Satyam Mittal"
 __copyright__   = "Copyright 2018"
 
-from collections import defaultdict
 import os
-import re
 import csv
 import sys
-import sqlparse
 import pandas as pd
 import json
 # Add vendor directory to module search path
@@ -95,7 +92,7 @@ class SQLEngine(object):
     def check_aggregate(self,array,dct_df):
         for key in array.keys():
             col = array[key]
-            rounded = 6
+            rounded = 2
             if isinstance(col, list):
                 rounded = int(col[1])
                 col= col[0]
@@ -300,7 +297,11 @@ if __name__ == "__main__":
     database.initialize_data()
     database.error = False
     #queryString = raw_input("SQL> ")
-    queryString = sys.argv[1]
+    if len(sys.argv) < 2 or sys.argv[1] is None or len(sys.argv[1])==0:
+        print "arg: <sql_query> required"
+        exit()
+    else:
+        queryString = sys.argv[1]
     #print queryString
     if queryString[-1]==';':
         try:
