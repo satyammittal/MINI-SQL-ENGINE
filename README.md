@@ -19,3 +19,10 @@ Type of Queries implemented here:​
 ####``Credits``
 #### [moz_sql_parser]: https://github.com/mozilla/moz-sql-parser
 
+
+## How to Run
+
+`python main.py "{query}"`
+
+example: `python main.py "select * from table1;"`
+
