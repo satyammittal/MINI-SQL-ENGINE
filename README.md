@@ -16,7 +16,7 @@ Type of Queries implemented here:​
     Projection of one or more(including all the columns) from two tables with one join condition :
     a. select * from table1, table2 where table1.col1=table2.col2; b. select col1,col2 from table1,table2 where table1.col1=table2.col2;
 
-####``Credits``
+##``Credits``
 #### [moz_sql_parser]: https://github.com/mozilla/moz-sql-parser
 
 
